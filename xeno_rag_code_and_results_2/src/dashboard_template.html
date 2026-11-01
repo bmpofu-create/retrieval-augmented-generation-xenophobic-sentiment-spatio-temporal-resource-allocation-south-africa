@@ -1,0 +1,177 @@
+<title>Unrest Early-Warning Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky control strip, then a map beside a ranked watchlist, then model-evidence panels below. */
+:root{--bg:#F5F6F7;--surface:#FFFFFF;--ink:#1D2530;--ink2:#505B69;--muted:#7C8794;--line:#DDE1E6;--accent:#1F5C7A;
+--green:#2E7D4F;--amber:#B7791F;--red:#B3382F;--green-bg:#E4F2E9;--amber-bg:#F9EDD2;--red-bg:#F8E1DE;--map:#EDF0F3;--grid:#E3E7EB;
+--sans:'Public Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12171D;--surface:#1A2129;--ink:#E7EBEF;--ink2:#AAB4BF;--muted:#7F8A96;--line:#2B343E;--accent:#6FB1D1;
+--green:#5DBB84;--amber:#E0A83F;--red:#EA7468;--green-bg:#1D3326;--amber-bg:#3A2F17;--red-bg:#3D2220;--map:#161C23;--grid:#222B34;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12171D;--surface:#1A2129;--ink:#E7EBEF;--ink2:#AAB4BF;--muted:#7F8A96;--line:#2B343E;--accent:#6FB1D1;
+--green:#5DBB84;--amber:#E0A83F;--red:#EA7468;--green-bg:#1D3326;--amber-bg:#3A2F17;--red-bg:#3D2220;--map:#161C23;--grid:#222B34;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:22px;margin:0;font-weight:700;text-wrap:balance}h2{font-size:15px;margin:0 0 4px;font-weight:600}
+.sub{color:var(--ink2);margin:2px 0 0;max-width:70ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.ctrl{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;background:transparent;color:var(--ink2);border:0;padding:6px 12px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}.seg button[aria-pressed=true]{background:var(--accent);color:var(--surface);font-weight:600}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.slider{display:flex;align-items:center;gap:10px;flex:1 1 320px;min-width:0}.slider input{flex:1;min-width:0;accent-color:var(--accent)}
+.wk{font-family:var(--mono);font-size:13px;min-width:10.5ch}
+.play{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}}
+#mapwrap{position:relative;background:var(--map);border-radius:6px;aspect-ratio:1/1;width:100%;max-width:100%}
+canvas{display:block;width:100%;height:100%;border-radius:6px}
+#tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);display:none;z-index:2;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;color:var(--ink2);font-size:12.5px;align-items:center}
+.sw{display:inline-block;vertical-align:-2px;margin-right:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px}
+.chip.g{background:var(--green-bg);color:var(--green)}.chip.a{background:var(--amber-bg);color:var(--amber)}.chip.r{background:var(--red-bg);color:var(--red)}
+table{border-collapse:collapse;width:100%}th{font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.sel td{background:var(--map)}tbody tr{cursor:pointer}
+.scroll{overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{border-left:3px solid var(--line);padding-left:10px}.kpi b{display:block;font-family:var(--mono);font-size:20px;font-weight:500}.kpi span{color:var(--ink2);font-size:12px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
+.note{color:var(--ink2);font-size:12.5px;margin-top:8px}
+.bars .r{display:grid;grid-template-columns:minmax(120px,38%) 1fr 52px;gap:8px;align-items:center;margin:5px 0;font-size:12.5px}
+.bars .lbl{color:var(--ink2);overflow-wrap:anywhere}.bars .track{height:10px;background:var(--grid);border-radius:0 5px 5px 0}
+.bars .fill{height:100%;border-radius:0 5px 5px 0;background:var(--muted)}.bars .fill.hl{background:var(--accent)}.bars .v{font-family:var(--mono);text-align:right}
+svg text{fill:var(--ink2);font-family:var(--sans);font-size:11px}
+details{margin-top:8px}summary{cursor:pointer;color:var(--accent);font-size:12.5px}
+</style>
+<div class="wrap">
+<header>
+  <h1>Unrest Early-Warning Map</h1>
+  <p class="sub">Gauteng towns coloured by resource-priority zone, built from 15,551 geo-tagged South African tweets (2017–2022) and recorded attacks. Zones show a prototype run on historical data, not live monitoring.</p>
+</header>
+<section class="panel ctrl" aria-label="Map controls">
+  <div class="seg" role="group" aria-label="Map layer">
+    <button data-view="actual" aria-pressed="true">Recorded zone</button><button data-view="now" aria-pressed="false">Model: this week</button><button data-view="fc" aria-pressed="false">Model: next-week forecast</button>
+  </div>
+  <div class="seg" role="group" aria-label="Density layer">
+    <button data-heat="none" aria-pressed="true">No density</button><button data-heat="neg" aria-pressed="false">Negative-tweet density</button><button data-heat="att" aria-pressed="false">Attack density</button>
+  </div>
+  <div class="slider"><button class="play" id="play" aria-label="Play through weeks">Play</button><input type="range" id="wk" min="0" value="0" aria-label="Week"><span class="wk" id="wklabel"></span></div>
+</section>
+<section class="main">
+  <div class="panel">
+    <h2>Zone map <span id="viewname" style="font-weight:400;color:var(--ink2)"></span></h2>
+    <div id="mapwrap"><canvas id="cv" role="img" aria-label="Map of Gauteng towns coloured by priority zone"></canvas><div id="tip"></div></div>
+    <div class="legend">
+      <span><svg class="sw" width="14" height="14"><circle cx="7" cy="7" r="5.5" fill="var(--green)"/></svg>Green: no attacks</span>
+      <span><svg class="sw" width="14" height="14"><path d="M7 1.5 13 12.5H1z" fill="var(--amber)"/></svg>Amber: 1 attack / staging alert</span>
+      <span><svg class="sw" width="14" height="14"><rect x="1.5" y="1.5" width="11" height="11" fill="var(--red)"/></svg>Red: 2+ attacks / pre-position</span>
+      <span>Marker size = tweets that week</span>
+    </div>
+    <p class="note" id="mapnote"></p>
+  </div>
+  <div class="panel">
+    <h2>Watchlist for this week</h2>
+    <p class="sub" style="font-size:12.5px" id="wlnote"></p>
+    <div class="scroll"><table id="wl"><thead><tr><th>Town</th><th>Zone</th><th class="n">Tweets</th><th class="n">Neg.</th><th class="n">Risk</th></tr></thead><tbody></tbody></table></div>
+    <details><summary>Towns outside the map window</summary><div class="note" id="outside"></div></details>
+  </div>
+</section>
+<section class="panel">
+  <h2>What the evidence says</h2>
+  <div class="kpis" id="kpis"></div>
+</section>
+<section class="grid2">
+  <div class="panel"><h2>Sentiment classification</h2><p class="sub" style="font-size:12.5px">Macro-F1, 5-fold grouped CV, out-of-fold. Higher is better.</p><div class="bars" id="sentbars"></div><p class="note" id="sentnote"></p></div>
+  <div class="panel"><h2>Zone model, same-week classification</h2><p class="sub" style="font-size:12.5px">Precision-recall AUC for flagging Amber or Red town-weeks, walk-forward 2019–2022.</p><div class="bars" id="zonebars"></div><p class="note" id="zonenote"></p></div>
+  <div class="panel"><h2>Does negative sentiment lead attacks?</h2><p class="sub" style="font-size:12.5px">Cross-correlation by lag; positive lag means tweets come first.</p><div id="ll"></div><p class="note" id="llnote"></p></div>
+  <div class="panel"><h2>What drives the zone model</h2><p class="sub" style="font-size:12.5px">Permutation importance on 2022 (drop in balanced accuracy).</p><div class="bars" id="impbars"></div><p class="note">Hostility features come from the retrieval-augmented classifier and lexicon severity score.</p></div>
+</section>
+</div>
+<script>
+const D=/*DATA*/null;
+const $=s=>document.querySelector(s),Z=['Green','Amber','Red'],ZC=['--green','--amber','--red'];
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let view='actual',heat='none',wi=0,sel=-1,hover=-1,timer=null;
+const BOX=D.kde.box;const inBox=t=>t.lon>=BOX[0]&&t.lon<=BOX[1]&&t.lat>=BOX[2]&&t.lat<=BOX[3];
+const byWeek=D.weeks.map(()=>[]);D.rows.forEach(r=>byWeek[r[1]].push(r));
+// peak week = most Red recorded town-weeks
+let peak=0,pv=-1;byWeek.forEach((a,i)=>{const v=a.filter(r=>r[4]>0).length;if(v>pv){pv=v;peak=i}});wi=peak;
+const wk=$('#wk');wk.max=D.weeks.length-1;wk.value=wi;
+const cv=$('#cv'),ctx=cv.getContext('2d');let W=0,H=0,dpr=1;
+function size(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
+const px=t=>[(t.lon-BOX[0])/(BOX[1]-BOX[0])*W,(BOX[3]-t.lat)/(BOX[3]-BOX[2])*H];
+const heatCache={};
+function heatImg(k){const key=k+css('--bg');if(heatCache[key])return heatCache[key];const g=D.kde[k],h=g.length,w=g[0].length,c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),im=x.createImageData(w,h);
+ const col=k==='neg'?[200,80,70]:[40,110,160];for(let i=0;i<h;i++)for(let j=0;j<w;j++){const v=g[h-1-i][j],o=(i*w+j)*4;im.data[o]=col[0];im.data[o+1]=col[1];im.data[o+2]=col[2];im.data[o+3]=v<12?0:Math.min(190,v*0.75)}x.putImageData(im,0,0);return heatCache[key]=c}
+function zoneOf(r){return view==='actual'?r[4]:view==='now'?r[5]:r[6]}
+function marker(x,y,z,rad,alpha){ctx.globalAlpha=alpha;ctx.fillStyle=css(ZC[z]);ctx.strokeStyle=css('--surface');ctx.lineWidth=2;ctx.beginPath();
+ if(z===0)ctx.arc(x,y,rad,0,7);else if(z===1){ctx.moveTo(x,y-rad*1.2);ctx.lineTo(x+rad*1.15,y+rad*.9);ctx.lineTo(x-rad*1.15,y+rad*.9);ctx.closePath()}else ctx.rect(x-rad*.95,y-rad*.95,rad*1.9,rad*1.9);ctx.fill();ctx.stroke();ctx.globalAlpha=1}
+function draw(){ctx.clearRect(0,0,W,H);ctx.strokeStyle=css('--grid');ctx.lineWidth=1;ctx.fillStyle=css('--muted');ctx.font='10px '+css('--mono');
+ for(let lo=27.7;lo<BOX[1];lo+=.2){const x=(lo-BOX[0])/(BOX[1]-BOX[0])*W;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();ctx.fillText(lo.toFixed(1)+'°E',x+3,H-4)}
+ for(let la=-26.5;la<BOX[3];la+=.2){const y=(BOX[3]-la)/(BOX[3]-BOX[2])*H;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();ctx.fillText(Math.abs(la).toFixed(1)+'°S',4,y-3)}
+ if(heat!=='none'){ctx.imageSmoothingEnabled=true;ctx.drawImage(heatImg(heat),0,0,W,H)}
+ const rows=byWeek[wi],seen=new Set();
+ rows.forEach(r=>{const t=D.towns[r[0]];if(!inBox(t))return;seen.add(r[0]);const [x,y]=px(t);marker(x,y,zoneOf(r),Math.min(13,4+Math.sqrt(r[2])*1.1),1)});
+ D.towns.forEach((t,i)=>{if(!inBox(t)||seen.has(i))return;const [x,y]=px(t);ctx.globalAlpha=.55;ctx.fillStyle=css('--muted');ctx.beginPath();ctx.arc(x,y,2.5,0,7);ctx.fill();ctx.globalAlpha=1});
+ ctx.fillStyle=css('--ink');ctx.font='11px '+css('--sans');
+ D.towns.forEach((t,i)=>{if(!inBox(t))return;const big=['Johannesburg','Pretoria','Boksburg','Soweto','Sandton','Midrand','Tembisa','Germiston','Mamelodi','Roodepoort','Centurion','Vosloorus'].includes(t.town);if(big||i===sel){const [x,y]=px(t);ctx.fillText(t.town,x+9,y+4)}});
+ if(sel>=0&&inBox(D.towns[sel])){const [x,y]=px(D.towns[sel]);ctx.strokeStyle=css('--ink');ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,17,0,7);ctx.stroke()}}
+const chipH=z=>`<span class="chip ${'gar'[z]}">${['●','▲','■'][z]} ${Z[z]}</span>`;
+function update(){const d=D.weeks[wi],rows=byWeek[wi];$('#wklabel').textContent='Week of '+d;
+ const nm={actual:'· recorded attacks this week',now:'· model classification of this week',fc:'· model forecast for the following week'}[view];$('#viewname').textContent=nm;
+ const risk=r=>view==='fc'?r[9]:r[8];
+ const list=rows.slice().sort((a,b)=>zoneOf(b)-zoneOf(a)||(view==='actual'?b[3]-a[3]:risk(b)-risk(a))||b[2]-a[2]).slice(0,12);
+ $('#wl tbody').innerHTML=list.map(r=>{const t=D.towns[r[0]];return `<tr data-i="${r[0]}" class="${r[0]===sel?'sel':''}"><td>${t.town}</td><td>${chipH(zoneOf(r))}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td><td class="n">${view==='actual'?'–':risk(r)+'%'}</td></tr>`}).join('');
+ const nr=rows.filter(r=>r[4]>0).length,na=rows.filter(r=>r[5]>0).length;
+ $('#mapnote').innerHTML=`${rows.length} towns posted this week. Recorded: <b>${nr}</b> Amber/Red. Model flagged (same week): <b>${na}</b>. ${view==='fc'?'Forecast shows the zone predicted for the next week; compare with next week\'s recorded view.':''}`;
+ $('#wlnote').textContent={actual:'Ranked by recorded zone, then negative tweets.',now:'Ranked by model zone, then alert score. Risk is the model score x100, not a calibrated probability.',fc:'Ranked by forecast zone, then forecast score. Risk is a ranking score, not a calibrated probability.'}[view];
+ const out=D.towns.map((t,i)=>({t,i})).filter(o=>!inBox(o.t)).map(o=>{const r=rows.find(x=>x[0]===o.i);return r?`${o.t.town} (${o.t.prov}): ${Z[zoneOf(r)]}, ${r[2]} tweets`:null}).filter(Boolean);
+ $('#outside').textContent=out.length?out.join(' · '):'No outside towns posted this week.';
+ const tip=sel>=0?D.towns[sel].town:'';draw()}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;document.querySelectorAll('[data-view]').forEach(x=>x.setAttribute('aria-pressed',x===b));update()});
+document.querySelectorAll('[data-heat]').forEach(b=>b.onclick=()=>{heat=b.dataset.heat;document.querySelectorAll('[data-heat]').forEach(x=>x.setAttribute('aria-pressed',x===b));draw()});
+wk.oninput=()=>{wi=+wk.value;update()};
+$('#play').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('#play').textContent='Play';return}$('#play').textContent='Pause';timer=setInterval(()=>{wi=(wi+1)%D.weeks.length;wk.value=wi;update()},260)};
+$('#wl tbody').onclick=e=>{const tr=e.target.closest('tr');if(!tr)return;sel=+tr.dataset.i;update()};
+function hit(e){const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;let best=-1,bd=18;byWeek[wi].forEach(row=>{const t=D.towns[row[0]];if(!inBox(t))return;const [x,y]=px(t),d=Math.hypot(x-mx,y-my);if(d<bd){bd=d;best=row}});return [best,mx,my]}
+cv.onmousemove=e=>{const [row,mx,my]=hit(e),tip=$('#tip');if(!row){tip.style.display='none';return}const t=D.towns[row[0]];
+ tip.innerHTML=`<b>${t.town}</b>, ${t.prov}<br>${row[2]} tweets, ${row[3]} negative<br>Recorded: ${Z[row[4]]} · Model: ${Z[row[5]]} · Forecast: ${row[6]<0?'n/a':Z[row[6]]}`;tip.style.display='block';tip.style.left=Math.min(mx+12,W-190)+'px';tip.style.top=(my+12)+'px'};
+cv.onmouseleave=()=>$('#tip').style.display='none';
+cv.onclick=e=>{const [row]=hit(e);if(row){sel=row[0];update()}};
+// ---------- evidence panels
+const k=D.kde_stats,sb=D.sent,zn=D.zone_now,zf=D.zone_fc;
+const get=(a,p)=>a.find(x=>x.model.startsWith(p));
+const bestS=sb.slice(1).reduce((a,b)=>b.macro_f1>a.macro_f1?b:a);
+$('#kpis').innerHTML=[
+ [(k.attack_mass_in_top10pct_neg_density*100).toFixed(0)+'%','of recorded attacks fall inside the densest 10% of negative-tweet area (chance ≈ '+(k.null_attack_mass_top10_mean*100).toFixed(0)+'%)'],
+ [k.spearman_kde_corr.toFixed(2),'Spearman correlation between negative-tweet and attack density grids'],
+ [bestS.macro_f1.toFixed(2),'best 3-class sentiment macro-F1 ('+bestS.model.split(':')[0].split(' [')[0].replace('TF-IDF + Logistic Regression','TF-IDF + LR')+')'],
+ [get(zn,'RF | B').pr_auc_alert.toFixed(2),'same-week alert PR-AUC with sentiment/RAG features (volume only: '+get(zn,'RF | A').pr_auc_alert.toFixed(2)+')'],
+ [get(zf,'Persistence').lift.toFixed(1)+'×','lift of the simple "same zone as last week" rule for next-week alerts']
+].map(a=>`<div class="kpi"><b>${a[0]}</b><span>${a[1]}</span></div>`).join('');
+function bars(el,items,max,fmt,hl){$(el).innerHTML=items.map(i=>`<div class="r"><div class="lbl">${i.l}</div><div class="track"><div class="fill ${i.h?'hl':''}" style="width:${i.v/max*100}%"></div></div><div class="v">${fmt(i.v)}</div></div>`).join('')}
+const short=m=>m.replace('TF-IDF(LSA) + GradientBoosting [XGBoost stand-in]','TF-IDF/LSA + gradient boosting*').replace('LSA dense MLP [DistilBERT stand-in]','LSA dense MLP*').replace('RAG: ','RAG ').replace('RAG hybrid: retrieval+lexicon+TF-IDF stack','RAG hybrid (retrieval + lexicon + TF-IDF)').replace('RAG retrieval+lexicon meta-classifier','RAG retrieval + lexicon');
+bars('#sentbars',sb.map(s=>({l:short(s.model),v:s.macro_f1,h:s.model.startsWith('RAG hybrid')})),0.6,v=>v.toFixed(3));
+$('#sentnote').textContent='* Stand-ins for XGBoost and DistilBERT, which could not be installed in the build environment. The RAG hybrid is within noise of TF-IDF + logistic regression; labels are hard to separate for every model.';
+const zrows=[['Last week\'s zone',get(zn,'Last')],['RF: volume only',get(zn,'RF | A')],['RF: + sentiment, RAG, virality, spatial',get(zn,'RF | B')],['GB: + sentiment, RAG, virality, spatial',get(zn,'GB | B')]];
+bars('#zonebars',zrows.map(r=>({l:r[0],v:r[1].pr_auc_alert,h:r[0].startsWith('RF: +')})),0.4,v=>v.toFixed(2));
+$('#zonenote').innerHTML=`Base rate of Amber/Red is 6%. At a 10% alert budget the RF model with sentiment features catches ${(get(zn,'RF | B').alert_recall*100).toFixed(0)}% of Amber/Red weeks and ${(get(zn,'RF | B').recall_red*100).toFixed(0)}% of Red weeks. Next-week forecasting is much weaker: best PR-AUC ${Math.max(...zf.filter(z=>z.model.includes('|')).map(z=>z.pr_auc_alert)).toFixed(2)}.`;
+bars('#impbars',D.imp.map(i=>({l:i.feature.replace(/_/g,' '),v:Math.max(i.importance,0)})),Math.max(...D.imp.map(i=>i.importance)),v=>v.toFixed(3));
+// lead-lag svg
+(function(){const a=D.ll['National, 6-hour bins'],b=D.ll['Gauteng, 6-hour bins'],w=520,h=250,m={l:44,r:12,t:12,b:36};const xs=v=>m.l+(v+120)/240*(w-m.l-m.r),ys=v=>m.t+(0.16-v)/0.22*(h-m.t-m.b);
+ const path=s=>s.lags.map((l,i)=>(i?'L':'M')+xs(l).toFixed(1)+' '+ys(s.cc[i]).toFixed(1)).join('');
+ let g='';[-0.05,0,0.05,0.1,0.15].forEach(v=>{g+=`<line x1="${m.l}" x2="${w-m.r}" y1="${ys(v)}" y2="${ys(v)}" stroke="var(--grid)"/><text x="${m.l-6}" y="${ys(v)+4}" text-anchor="end">${v.toFixed(2)}</text>`});
+ [-120,-60,0,60,120].forEach(v=>{g+=`<text x="${xs(v)}" y="${h-16}" text-anchor="middle">${v}h</text>`});
+ g+=`<line x1="${xs(0)}" x2="${xs(0)}" y1="${m.t}" y2="${h-m.b}" stroke="var(--muted)" stroke-dasharray="3 3"/><line x1="${m.l}" x2="${w-m.r}" y1="${ys(a.band)}" y2="${ys(a.band)}" stroke="var(--amber)" stroke-dasharray="4 3"/><text x="${w-m.r}" y="${ys(a.band)-4}" text-anchor="end">95% permutation band</text>`;
+ g+=`<path d="${path(b)}" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="${path(a)}" fill="none" stroke="var(--red)" stroke-width="2"/>`;
+ g+=`<text x="${xs(0)+6}" y="${ys(.14)+4}">lag 0: r≈${D.ll_best['National, 6-hour bins'].peak_cc.toFixed(2)}</text><text x="${xs(-118)}" y="${m.t+10}" fill="var(--red)" style="fill:var(--red)">National</text><text x="${xs(-118)+52}" y="${m.t+10}" style="fill:var(--accent)">Gauteng</text>`;
+ $('#ll').innerHTML=`<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Lead-lag cross-correlation chart"><title>Cross-correlation between negative tweet volume and recorded attacks by lag in hours</title>${g}</svg>`;
+ const lb=D.ll_best['National, 6-hour bins'];$('#llnote').textContent=`The correlation peaks at lag 0 (same 6-hour window). The strongest lead is ${lb.best_lead_h} hours at r=${lb.best_lead_cc.toFixed(2)}, barely above the ${lb.band95.toFixed(2)} band, so the data do not support a reliable multi-day staging window.`})();
+window.addEventListener('resize',size);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{Object.keys(heatCache).forEach(k=>delete heatCache[k]);draw()});
+new MutationObserver(()=>{Object.keys(heatCache).forEach(k=>delete heatCache[k]);draw()}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+size();update();
+</script>

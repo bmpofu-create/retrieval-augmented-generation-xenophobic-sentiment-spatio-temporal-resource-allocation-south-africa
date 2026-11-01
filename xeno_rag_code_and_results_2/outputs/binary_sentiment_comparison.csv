@@ -1,0 +1,4 @@
+model,accuracy,macro_f1,f1_nonhostile,f1_hostile,precision_hostile,recall_hostile,pr_auc_hostile,macro_f1_fold_sd
+Majority class,0.5783,0.3664,0.0,0.7328,0.5783,1.0,0.5783,0.0001
+TF-IDF + logistic regression,0.6166,0.6075,0.5477,0.6672,0.6698,0.6646,0.6955,0.006
+TF-IDF + lexicon + logistic regression,0.6176,0.609,0.5508,0.6672,0.6717,0.6626,0.6979,0.0076

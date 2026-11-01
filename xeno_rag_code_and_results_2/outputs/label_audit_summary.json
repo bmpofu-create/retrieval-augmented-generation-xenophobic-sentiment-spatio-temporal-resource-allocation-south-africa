@@ -1,0 +1,19 @@
+{
+  "rows": 15551,
+  "empty_text": 0,
+  "hostile": 8993,
+  "non_hostile": 6558,
+  "sentiment_counts": {
+    "Negative": 8993,
+    "Neutral": 4180,
+    "Positive": 2378
+  },
+  "binary_conflict_rows": 0,
+  "binary_conflict_texts": 0,
+  "three_class_conflict_rows": 0,
+  "three_class_conflict_texts": 0,
+  "nonhostile_with_hostile_lexicon": 2280,
+  "hostile_without_hostile_lexicon": 5488,
+  "labels_rewritten": false,
+  "note": "No tweet was relabelled. Binary training drops binary-conflict texts. Fill review_label in label_review_sample.csv before treating any new label as ground truth."
+}

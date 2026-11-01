@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Generated locally. The vector index is large and rebuilt by s03.
+*.pkl
+*.zip
+chroma_db/
+
+# Nested copy of the cleaning export.
+cleaned/cleaned/
+
+# Tweet-level files contain post text, user locations, and contact details.
+# Town-level tables in outputs/ are tracked.
+*SA_XenoDataset*.csv
+SA_XenoDataset_2017-2022.csv
+features_tweet.csv.gz
+label_review_sample.csv
+label_conflicts.csv
+incidents_independent.csv

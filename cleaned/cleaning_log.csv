@@ -1,0 +1,21 @@
+step,rows_affected,detail
+sentiment standardised,4857,61 variants fixed
+sentiment unresolved -> NaN,58,"kept as unlabelled, excluded from the model-ready file"
+sentiment standardised,0,0 variants fixed
+sentiment unresolved -> NaN,58,"kept as unlabelled, excluded from the model-ready file"
+unparseable date/time dropped,0,
+coordinates invalid (unparseable / outside SA) -> NaN,4,
+coordinates imputed,7,
+province imputed,1,
+district imputed,56,
+Likes: non-numeric -> NaN,0,
+No of replies: non-numeric -> NaN,0,
+Retweets: non-numeric -> NaN,0,
+Number of Attacks: letter 'o' -> 0,1,
+Number of Attacks: non-numeric -> NaN,0,
+Number of Attacks imputed,1,
+non-linguistic language code flagged,310,
+tweet text changed by cleaning,5460,"entities, line breaks, whitespace, etc."
+tweets without usable text,137,"flagged, not deleted"
+duplicate tweet text,201,second and later copies
+rows in label-conflict groups,169,31 distinct texts

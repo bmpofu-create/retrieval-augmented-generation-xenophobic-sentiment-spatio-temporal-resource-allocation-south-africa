@@ -1,0 +1,8 @@
+model,accuracy,macro_precision,macro_recall,macro_f1,weighted_f1,f1_Negative,f1_Neutral,f1_Positive,macro_f1_fold_sd,accuracy_fold_sd
+Majority class,0.5783,0.1928,0.3333,0.2443,0.4238,0.7328,0.0,0.0,0.0,0.0002
+TF-IDF + Logistic Regression,0.5327,0.4424,0.4426,0.4425,0.533,0.6661,0.4025,0.2589,0.0123,0.0091
+TF-IDF(LSA) + GradientBoosting [XGBoost stand-in],0.509,0.4315,0.4345,0.4308,0.5186,0.6449,0.4024,0.2449,0.0061,0.0072
+LSA dense MLP [DistilBERT stand-in],0.6006,0.4807,0.3902,0.358,0.5165,0.7398,0.3243,0.0099,0.024,0.0091
+RAG: retrieval kNN vote,0.5798,0.443,0.3934,0.3762,0.5185,0.7207,0.3395,0.0685,0.0037,0.0047
+RAG: retrieval+lexicon meta-classifier,0.4672,0.4259,0.4324,0.4156,0.4882,0.5969,0.377,0.2729,0.0072,0.0104
+RAG hybrid: retrieval+lexicon+TF-IDF stack,0.4872,0.4433,0.4525,0.434,0.5067,0.6166,0.3906,0.2949,0.0105,0.0124

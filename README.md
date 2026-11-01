@@ -1,6 +1,10 @@
-# Xeno-RAG
+# A Retrieval-Augmented Generation (RAG) Framework for Xenophobic Sentiment Classification and Spatio-Temporal Resource Allocation in South Africa
 
-Retrieval-style classification of hostile sentiment in South African tweets (2017–2022), and a town-week Green / Amber / Red priority model.
+GitHub repository name, shortened to the 100-character limit:
+
+`retrieval-augmented-generation-xenophobic-sentiment-spatio-temporal-resource-allocation-south-africa`
+
+Classification of hostile sentiment in South African tweets (2017–2022), and a town-week Green / Amber / Red priority model.
 
 The working pipeline is in `xeno_rag_code_and_results_2/`. Cleaning notes are in `cleaned/data_cleaning.ipynb`. Run instructions, including the later binary-label and town-rate scripts, are in `xeno_rag_code_and_results_2/README.md`.
 
